@@ -1,0 +1,354 @@
+// @Title  util
+// @Description  收集各种需要使用的工具函数
+// @Author  MGAronya（张健）
+// @Update  MGAronya（张健）  2022-9-16 0:47
+package util
+
+import (
+	"context"
+	"encoding/csv"
+	"fmt"
+	"lianjiang/common"
+	"lianjiang/model"
+	"math/rand"
+	"net/smtp"
+	"path"
+	"regexp"
+	"time"
+
+	"os"
+
+	"github.com/tealeg/xlsx"
+
+	"github.com/extrame/xls"
+
+	"github.com/jordan-wright/email"
+	"golang.org/x/crypto/bcrypt"
+	"gorm.io/gorm"
+)
+
+// 小时制点集字段映射表
+var HourMap = map[string]string{
+	"时间":       "Time",
+	"水温":       "Temperature",
+	"pH":       "PH",
+	"溶解氧":      "DO",
+	"电导率":      "EC",
+	"浊度":       "Turbidity",
+	"高锰酸盐指数":   "CODMII",
+	"氨氮":       "NH_N",
+	"总磷":       "TP",
+	"总氮":       "TN",
+	"CODcr":    "CODcr",
+	"氰化物":      "CN",
+	"挥发酚":      "VolatilePenol",
+	"六价铬":      "Cr",
+	"铜":        "Cu",
+	"锌":        "Zn",
+	"铅":        "Pb",
+	"镉":        "Cd",
+	"阴离子表面活性剂": "LAS",
+	"硫化物":      "SOx",
+	"累计流量":     "CumulativeDischarge",
+	"水流量":      "WaterDischarge",
+	"总累积流量":    "TotalCumulativeFlow",
+	"水位":       "WaterLevel",
+	"时段累积流量":   "PeriodCumulativeFlow",
+	"断面平均流速":   "SectionalMeanVelocity",
+	"当前瞬时流速":   "CurrentInstantaneousVelocity",
+	"瞬时流量":     "InstantaneousDelivery",
+	"断面面积":     "SectionalArea",
+}
+
+// @title    Read
+// @description   读取文件内容
+// @auth      MGAronya（张健）             2022-9-16 10:29
+// @param     file_path string		文件位置
+// @return    res [][]string, err error		res为读出的内容，err为可能出现的错误
+func Read(file_path string) (res [][]string, err error) {
+
+	extName := path.Ext(file_path)
+
+	if extName == ".csv" {
+		return ReadCsv(file_path)
+	} else if extName == ".xls" {
+		return ReadXls(file_path)
+	} else if extName == ".xlsx" {
+		return ReadXlsx(file_path)
+	}
+	return nil, nil
+}
+
+// @title    ReadCsv
+// @description   读取Csv文件内容
+// @auth      MGAronya（张健）             2022-9-16 10:29
+// @param     file_path string		文件位置
+// @return    res [][]string, err error		res为读出的内容，err为可能出现的错误
+func ReadCsv(file_path string) (res [][]string, err error) {
+	file, err := os.Open(file_path)
+	if err != nil {
+		return nil, err
+	}
+	defer file.Close()
+	// 初始化csv-reader
+	reader := csv.NewReader(file)
+	// 设置返回记录中每行数据期望的字段数，-1 表示返回所有字段
+	reader.FieldsPerRecord = -1
+	// 允许懒引号（忘记遇到哪个问题才加的这行）
+	reader.LazyQuotes = true
+	// 返回csv中的所有内容
+	records, read_err := reader.ReadAll()
+	if read_err != nil {
+		return nil, read_err
+	}
+	return records, nil
+}
+
+// @title    ReadXls
+// @description   读取Xls文件内容
+// @auth      MGAronya（张健）             2022-9-16 10:29
+// @param     file_path string		文件位置
+// @return    res [][]string, err error		res为读出的内容，err为可能出现的错误
+func ReadXls(file_path string) (res [][]string, err error) {
+	if xlFile, err := xls.Open(file_path, "utf-8"); err == nil {
+		fmt.Println(xlFile.Author)
+		//第一个sheet
+		sheet := xlFile.GetSheet(0)
+		if sheet.MaxRow != 0 {
+			temp := make([][]string, sheet.MaxRow)
+			for i := 0; i < int(sheet.MaxRow); i++ {
+				row := sheet.Row(i)
+				data := make([]string, 0)
+				if row.LastCol() > 0 {
+					for j := 0; j < row.LastCol(); j++ {
+						col := row.Col(j)
+						data = append(data, col)
+					}
+					temp[i] = data
+				}
+			}
+			res = append(res, temp...)
+		}
+	} else {
+		return nil, err
+	}
+	return res, nil
+}
+
+// @title    ReadXlsx
+// @description   读取Xlsx文件内容
+// @auth      MGAronya（张健）             2022-9-16 10:29
+// @param     file_path string		文件位置
+// @return    res [][]string, err error		res为读出的内容，err为可能出现的错误
+func ReadXlsx(file_path string) (res [][]string, err error) {
+	if xlFile, err := xlsx.OpenFile(file_path); err == nil {
+		for index, sheet := range xlFile.Sheets {
+			//第一个sheet
+			if index == 0 {
+				temp := make([][]string, len(sheet.Rows))
+				for k, row := range sheet.Rows {
+					var data []string
+					for _, cell := range row.Cells {
+						data = append(data, cell.Value)
+					}
+					temp[k] = data
+				}
+				res = append(res, temp...)
+			}
+		}
+	} else {
+		return nil, err
+	}
+	return res, nil
+}
+
+// @title    RandomString
+// @description   生成一段随机的字符串
+// @auth      MGAronya（张健）             2022-9-16 10:29
+// @param     n int		字符串的长度
+// @return    string    一串随机的字符串
+func RandomString(n int) string {
+	var letters = []byte("qwertyuioplkjhgfdsazxcvbnmQWERTYUIOPLKJHGFDSAZXCVBNM")
+	result := make([]byte, n)
+	rand.Seed(time.Now().Unix())
+	// TODO 不断用随机字母填充字符串
+	for i := range result {
+		result[i] = letters[rand.Intn(len(letters))]
+	}
+	return string(result)
+}
+
+// @title    VerifyEmailFormat
+// @description   用于验证邮箱格式是否正确的工具函数
+// @auth      MGAronya（张健）             2022-9-16 10:29
+// @param     email string		一串字符串，表示邮箱
+// @return    bool    返回是否合法
+func VerifyEmailFormat(email string) bool {
+	pattern := `^[0-9a-z][_.0-9a-z-]{0,31}@([0-9a-z][0-9a-z-]{0,30}[0-9a-z]\.){1,4}[a-z]{2,4}$`
+
+	reg := regexp.MustCompile(pattern)
+	return reg.MatchString(email)
+}
+
+// @title    VerifyMobileFormat
+// @description   用于验证手机号格式是否正确的工具函数
+// @auth      MGAronya（张健）             2022-9-16 10:29
+// @param     mobileNum string		一串字符串，表示手机号
+// @return    bool    返回是否合法
+func VerifyMobileFormat(mobileNum string) bool {
+	regular := "^((13[0-9])|(14[5,7])|(15[0-3,5-9])|(17[0,3,5-8])|(18[0-9])|166|198|199|(147))\\d{8}$"
+
+	reg := regexp.MustCompile(regular)
+	return reg.MatchString(mobileNum)
+}
+
+// @title    VerifyQQFormat
+// @description   用于验证QQ号格式是否正确的工具函数
+// @auth      MGAronya（张健）             2022-9-16 10:29
+// @param     QQNum string		一串字符串，表示QQ
+// @return    bool    返回是否合法
+func VerifyQQFormat(QQNum string) bool {
+	regular := "[1-9][0-9]{4,10}"
+
+	reg := regexp.MustCompile(regular)
+	return reg.MatchString(QQNum)
+}
+
+// @title    VerifyQQFormat
+// @description  用于验证Icon是否为默认图片的工具函数
+// @auth      MGAronya（张健）             2022-9-16 10:29
+// @param     Icon string		一串字符串，表示图像名称
+// @return    bool    返回是否合法
+func VerifyIconFormat(Icon string) bool {
+	regular := "MGA[1-9].jpg"
+
+	reg := regexp.MustCompile(regular)
+	return reg.MatchString(Icon)
+}
+
+// @title    isEmailExist
+// @description   查看email是否在数据库中存在
+// @auth      MGAronya（张健）       2022-9-16 12:15
+// @param    ctx *gin.Context       接收一个上下文
+// @return   void
+func IsEmailExist(db *gorm.DB, email string) bool {
+	var user model.User
+	db.Where("email = ?", email).First(&user)
+	return user.ID != 0
+}
+
+// @title    isNameExist
+// @description   查看name是否在数据库中存在
+// @auth      MGAronya（张健）       2022-9-16 12:15
+// @param    ctx *gin.Context       接收一个上下文
+// @return   void
+func IsNameExist(db *gorm.DB, name string) bool {
+	var user model.User
+	db.Where("name = ?", name).First(&user)
+	return user.ID != 0
+}
+
+var ctx context.Context = context.Background()
+
+// @title    SendEmailValidate
+// @description   发送验证邮件
+// @auth      MGAronya（张健）       2022-9-16 12:15
+// @param    em []string       接收一个邮箱字符串
+// @return   string, error     返回验证码和error值
+func SendEmailValidate(em []string) (string, error) {
+	mod := `
+	尊敬的%s，您好！
+
+	您于 %s 提交的邮箱验证，本次验证码为%s，为了保证账号安全，验证码有效期为5分钟。请确认为本人操作，切勿向他人泄露，感谢您的理解与使用。
+	此邮箱为系统邮箱，请勿回复。
+`
+	e := email.NewEmail()
+	e.From = "mgAronya <2829214609@qq.com>"
+	e.To = em
+	// TODO 生成6位随机验证码
+	rnd := rand.New(rand.NewSource(time.Now().UnixNano()))
+	vCode := fmt.Sprintf("%06v", rnd.Int31n(1000000))
+	t := time.Now().Format("2006-01-02 15:04:05")
+	// TODO 设置文件发送的内容
+	content := fmt.Sprintf(mod, em[0], t, vCode)
+	e.Text = []byte(content)
+	// TODO 设置服务器相关的配置
+	err := e.Send("smtp.qq.com:25", smtp.PlainAuth("", "2829214609@qq.com", "rmdtxokuuqyrdgii", "smtp.qq.com"))
+	return vCode, err
+}
+
+// @title    SendEmailPass
+// @description   发送密码邮件
+// @auth      MGAronya（张健）       2022-9-16 12:15
+// @param    em []string       接收一个邮箱字符串
+// @return   string, error     返回验证码和error值
+func SendEmailPass(em []string) string {
+	mod := `
+	尊敬的%s，您好！
+
+	您于 %s 提交的邮箱验证，已经将密码重置为%s，为了保证账号安全。切勿向他人泄露，并尽快更改密码，感谢您的理解与使用。
+	此邮箱为系统邮箱，请勿回复。
+`
+	e := email.NewEmail()
+	e.From = "mgAronya <2829214609@qq.com>"
+	e.To = em
+	// TODO 生成8位随机密码
+	rnd := rand.New(rand.NewSource(time.Now().UnixNano()))
+	password := fmt.Sprintf("%08v", rnd.Int31n(100000000))
+	t := time.Now().Format("2006-01-02 15:04:05")
+
+	db := common.GetDB()
+
+	// TODO 创建密码哈希
+	hasedPassword, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
+
+	if err != nil {
+		return "密码加密失败"
+	}
+
+	// TODO 更新密码
+	err = db.Model(&model.User{}).Where("email = ?", em[0]).Updates(model.User{
+		Password: string(hasedPassword),
+	}).Error
+
+	if err != nil {
+		return "密码更新失败"
+	}
+
+	// TODO 设置文件发送的内容
+	content := fmt.Sprintf(mod, em[0], t, password)
+	e.Text = []byte(content)
+	// TODO 设置服务器相关的配置
+	err = e.Send("smtp.qq.com:25", smtp.PlainAuth("", "2829214609@qq.com", "rmdtxokuuqyrdgii", "smtp.qq.com"))
+
+	if err != nil {
+		return "邮件发送失败"
+	}
+
+	return "密码已重置"
+}
+
+// @title    IsEmailPass
+// @description   验证邮箱是否通过
+// @auth      MGAronya（张健）       2022-9-16 12:15
+// @param    em []string       接收一个邮箱字符串
+// @return   string, error     返回验证码和error值
+func IsEmailPass(email string, vertify string) bool {
+	client := common.GetRedisClient(0)
+	V, err := client.Get(ctx, email).Result()
+	if err != nil {
+		return false
+	}
+	return V == vertify
+}
+
+// @title    SetRedisEmail
+// @description   设置验证码，并令其存活五分钟
+// @auth      MGAronya（张健）       2022-9-16 12:15
+// @param    email string, v string       接收一个邮箱和一个验证码
+// @return   void
+func SetRedisEmail(email string, v string) {
+	client := common.GetRedisClient(0)
+
+	client.Set(ctx, email, v, 300*time.Second)
+}
