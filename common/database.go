@@ -44,7 +44,6 @@ func InitDB() *gorm.DB {
 		panic("failed to connect database, err:" + err.Error())
 	}
 	db.AutoMigrate(&model.User{})
-	db.AutoMigrate(&model.PointHour{})
 	DB = db
 	return db
 }
