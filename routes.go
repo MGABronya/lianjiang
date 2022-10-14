@@ -45,12 +45,9 @@ func CollectRoute(r *gin.Engine) *gin.Engine {
 	r.GET("/files", middleware.AuthMiddleware(), controller.List)
 
 	// TODO 文件下载
-	r.GET("/download/:file", middleware.AuthMiddleware(), controller.Download)
+	r.GET("/download", middleware.AuthMiddleware(), controller.Download)
 
-	// TODO 请求某个站点的信息
-	//r.GET("/hour/:name/:")
-
-	// TODO
+	// TODO 查看当前注册表
 
 	return r
 }

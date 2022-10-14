@@ -81,7 +81,7 @@ func Upload(ctx *gin.Context) {
 	}
 
 	// TODO 尝试建立对应文件夹
-	err = util.Mkdir("./" + sys)
+	err = util.Mkdir("./home/" + sys)
 
 	if err != nil {
 		response.Fail(ctx, nil, "创建路径失败，系统错误")
@@ -89,10 +89,10 @@ func Upload(ctx *gin.Context) {
 	}
 
 	// TODO 将文件存入本地
-	ctx.SaveUploadedFile(file, "./"+sys+"/"+file.Filename)
+	ctx.SaveUploadedFile(file, "./home/"+sys+"/"+file.Filename)
 
 	// TODO 解析文件
-	res, err := util.Read("./" + sys + "/" + file.Filename)
+	res, err := util.Read("./home/" + sys + "/" + file.Filename)
 
 	// TODO 解析有误
 	if err != nil || res == nil {
@@ -249,13 +249,8 @@ func Upload(ctx *gin.Context) {
 			case "time.Time":
 				// TODO 成功取出数字
 				data, err := strconv.ParseFloat(res[i][j], 64)
-				// TODO 如果时间有误，退出这层数据提取
-				if err != nil {
-					fmt.Printf("第%d行%d列的时间有误\n", i, j)
-					break
-				}
 				// TODO 如果出现了数据读出损坏，尝试修复数据
-				if data < 40000.0 || data > 60000.0 {
+				if err != nil || data < 40000.0 || data > 60000.0 {
 					// TODO 如果是递增或者递减，则测算出损坏数据
 					if i > start+3 {
 						var t1, t2, t3 float64
@@ -283,7 +278,8 @@ func Upload(ctx *gin.Context) {
 
 						// TODO 满足则计算预测值
 						data = t1 + t1 - t2
-					} else if i < len(res)-3 {
+					}
+					if i < len(res)-3 {
 						var t1, t2, t3 float64
 						// TODO 取出后三位数据
 						t1, err = strconv.ParseFloat(res[i+1][0], 64)
@@ -377,8 +373,16 @@ func List(ctx *gin.Context) {
 		return
 	}
 
+	// TODO 取出请求
+	path := ctx.DefaultQuery("path", "")
+
 	// TODO 获得hour目录下的所有文件
-	files := util.GetFiles("../hour")
+	files, err := util.GetFiles(path)
+
+	if err != nil {
+		response.Fail(ctx, nil, "不存在该文件夹")
+		return
+	}
 
 	response.Success(ctx, gin.H{"files": files}, "请求成功")
 
@@ -400,12 +404,10 @@ func Download(ctx *gin.Context) {
 		return
 	}
 
-	// TODO 从path中获取文件名
-	fileName := ctx.Params.ByName("file")
+	// TODO 取出请求
+	path := ctx.DefaultQuery("path", "")
+	file := ctx.DefaultQuery("file", "")
 
-	// TODO 获取文件地址
-	filePath := "./hour/" + fileName
-
-	ctx.Writer.Header().Add("Content-Disposition", fmt.Sprintf("attachment; filename=%s", fileName))
-	ctx.File(filePath)
+	ctx.Writer.Header().Add("Content-Disposition", fmt.Sprintf("attachment; filename=%s", file))
+	ctx.File("./home" + path)
 }
