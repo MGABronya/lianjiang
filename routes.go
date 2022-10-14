@@ -35,17 +35,17 @@ func CollectRoute(r *gin.Engine) *gin.Engine {
 	// TODO 用户的登录路由
 	r.POST("/login", controller.Login)
 
-	// TODO 用户的个人页面路由
+	// TODO 用户的个人信息路由
 	r.GET("/personal", middleware.AuthMiddleware(), controller.PersonalPage)
 
-	// TODO 小时文件上传
-	r.POST("/hour/upload", middleware.AuthMiddleware(), controller.HourUpload)
+	// TODO 文件上传
+	r.POST("/upload/:system", middleware.AuthMiddleware(), controller.Upload)
 
-	// TODO 小时文件列表
-	r.GET("/hours")
+	// TODO 文件列表
+	r.GET("/files", middleware.AuthMiddleware(), controller.List)
 
-	// TODO 小时文件下载
-	//r.GET("/hour/download")
+	// TODO 文件下载
+	r.GET("/download/:file", middleware.AuthMiddleware(), controller.Download)
 
 	// TODO 请求某个站点的信息
 	//r.GET("/hour/:name/:")
