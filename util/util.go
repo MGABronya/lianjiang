@@ -8,12 +8,15 @@ import (
 	"context"
 	"encoding/csv"
 	"fmt"
+	"io/ioutil"
 	"lianjiang/common"
 	"lianjiang/model"
+	"math"
 	"math/rand"
 	"net/smtp"
 	"path"
 	"regexp"
+	"strconv"
 	"time"
 
 	"os"
@@ -27,11 +30,22 @@ import (
 	"gorm.io/gorm"
 )
 
-// 小时制点集字段映射表
-var HourMap = map[string]string{
+// 点集字段映射表
+var PointMap = map[string]string{
+	"监测断面":     "StationName",
+	"监测指标":     "Time",
+	"监测时间":     "Time",
 	"时间":       "Time",
 	"水温":       "Temperature",
 	"pH":       "PH",
+	"化学需氧量":    "Cod",
+	"五日生化需氧量":  "FiveDaysNiochemicalOxygenDemand",
+	"硒":        "Se",
+	"砷":        "As",
+	"汞":        "Hg",
+	"氟化物":      "Fluoride",
+	"石油类":      "Petroleum",
+	"粪大肠菌群":    "FecalColiform",
 	"溶解氧":      "DO",
 	"电导率":      "EC",
 	"浊度":       "Turbidity",
@@ -59,6 +73,59 @@ var HourMap = map[string]string{
 	"瞬时流量":     "InstantaneousDelivery",
 	"断面面积":     "SectionalArea",
 }
+
+// 行唯一字段映射表
+var RowOneMap = map[string]string{
+	"水质类别":  "water_quality_classification",
+	"主要污染物": "key_pollutant",
+}
+
+// 行多字段映射表
+var RowAllMap = map[string]string{
+	"分项类别": "item_category",
+}
+
+// 制度映射表
+var SysMap = map[string]string{
+	"小时制": "hour",
+	"月度制": "month",
+}
+
+// 文件内容的标记点映射表
+var OptMap = map[string]string{
+	"hour":  "时间",
+	"month": "监测断面",
+}
+
+// 站名注册表
+var StationMap = map[string]string{
+	"海门湾桥闸":  "haimen_bay_bridge_gate",
+	"汕头练江水站": "lian_jiang_water_station",
+	"青洋山桥":   "lian_jiang_water_station",
+	"新溪西村":   "xinxi_village",
+	"万兴桥":    "wanxing_bridge",
+	"流仙学校":   "liuxian_school",
+	"仙马闸":    "xianma_brake",
+	"华侨学校":   "huaqiao_school",
+	"港洲桥":    "gangzhou_bridge",
+	"云陇":     "yunlong",
+	"北港水":    "beixiangshui",
+	"官田水":    "guantianshui",
+	"北港河闸":   "beixiang_penstock",
+	"峡山大溪":   "xiashan_stream",
+	"井仔湾闸":   "jingzai_wan_sluice",
+	"东北支流":   " northeast_branch",
+	"西埔桥闸":   "xipu_bridge_sluice",
+	"五福桥":    "wufu_bridge",
+	"成田大寮":   "narita_daliao",
+	"新坛港":    "xitan_port",
+	"瑶池港":    "yaochi_port",
+	"护城河闸":   "moat_locks",
+	"和平桥":    "peace_bridge",
+}
+
+// 数据注册表
+var DataMap = map[string]float64{}
 
 // @title    Read
 // @description   读取文件内容
@@ -90,13 +157,13 @@ func ReadCsv(file_path string) (res [][]string, err error) {
 		return nil, err
 	}
 	defer file.Close()
-	// 初始化csv-reader
+	// TODO 初始化csv-reader
 	reader := csv.NewReader(file)
-	// 设置返回记录中每行数据期望的字段数，-1 表示返回所有字段
+	// TODO 设置返回记录中每行数据期望的字段数，-1 表示返回所有字段
 	reader.FieldsPerRecord = -1
-	// 允许懒引号（忘记遇到哪个问题才加的这行）
+	// TODO 允许懒引号（忘记遇到哪个问题才加的这行）
 	reader.LazyQuotes = true
-	// 返回csv中的所有内容
+	// TODO 返回csv中的所有内容
 	records, read_err := reader.ReadAll()
 	if read_err != nil {
 		return nil, read_err
@@ -112,7 +179,7 @@ func ReadCsv(file_path string) (res [][]string, err error) {
 func ReadXls(file_path string) (res [][]string, err error) {
 	if xlFile, err := xls.Open(file_path, "utf-8"); err == nil {
 		fmt.Println(xlFile.Author)
-		//第一个sheet
+		// TODO 第一个sheet
 		sheet := xlFile.GetSheet(0)
 		if sheet.MaxRow != 0 {
 			temp := make([][]string, sheet.MaxRow)
@@ -143,7 +210,7 @@ func ReadXls(file_path string) (res [][]string, err error) {
 func ReadXlsx(file_path string) (res [][]string, err error) {
 	if xlFile, err := xlsx.OpenFile(file_path); err == nil {
 		for index, sheet := range xlFile.Sheets {
-			//第一个sheet
+			// TODO 第一个sheet
 			if index == 0 {
 				temp := make([][]string, len(sheet.Rows))
 				for k, row := range sheet.Rows {
@@ -160,6 +227,105 @@ func ReadXlsx(file_path string) (res [][]string, err error) {
 		return nil, err
 	}
 	return res, nil
+}
+
+// @title    GetFiles
+// @description   获取一个目录下的所有文件
+// @auth      MGAronya（张健）             2022-9-16 10:29
+// @param     folder string	指定目录
+// @return    []string    所有文件的文件名
+func GetFiles(folder string) []string {
+	files, _ := ioutil.ReadDir(folder)
+	res := make([]string, 10)
+	for _, file := range files {
+		if file.IsDir() {
+			GetFiles(folder + file.Name())
+			continue
+		} else {
+			res = append(res, file.Name())
+		}
+	}
+	return res
+}
+
+// @title    PathExists
+// @description   判断文件夹是否存在
+// @auth      MGAronya（张健）             2022-9-16 10:29
+// @param     path string	指定目录
+// @return    bool, error    查看文件夹是否存在
+func PathExists(path string) (bool, error) {
+	_, err := os.Stat(path)
+	if err == nil {
+		return true, nil
+	}
+	if os.IsNotExist(err) {
+		return false, nil
+	}
+	return false, err
+}
+
+// @title    Mkdir
+// @description   建立文件夹
+// @auth      MGAronya（张健）             2022-9-16 10:29
+// @param     path string	指定路径
+// @return   error    查看是否出错
+func Mkdir(dir string) error {
+	exist, err := PathExists(dir)
+	if err != nil {
+		return err
+	}
+
+	if !exist {
+		// TODO 创建文件夹
+		err := os.Mkdir(dir, os.ModePerm)
+		if err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+// @title    StringToFloat
+// @description   从字符串中提取各式各样的浮点数
+// @auth      MGAronya（张健）             2022-9-16 10:29
+// @param     s string		一串字符串
+// @return    float64, bool		表示解析出来的浮点数，ok表示解析是否成功
+func StringToFloat(s string) (float64, bool) {
+	// TODO 优先查看数据注册表
+	data, ok := DataMap[s]
+	if ok {
+		return data, ok
+	}
+	k := len(s)
+	// TODO 尝试取出前缀数字，以此来滤过符号单位
+	for k >= 0 {
+		_, err := strconv.ParseFloat(s[0:k], 64)
+		if err != nil {
+			k--
+		} else {
+			break
+		}
+	}
+	// TODO 成功取出数字
+	if k > 0 {
+		data, err := strconv.ParseFloat(s[0:k], 64)
+		if err != nil {
+			return 0, false
+		}
+		// TODO 查看是否有科学计数法
+		if k+4 <= len(s) && s[k:(k+4)] == "×10" {
+			// TODO 尝试读出后缀数字
+			data1, ok := StringToFloat(s[(k + 4):])
+			if !ok {
+				data1 = 0
+			} else if data1 == 0 {
+				data1 = 1
+			}
+			data *= math.Pow(10, data1)
+		}
+		return data, true
+	}
+	return 0, false
 }
 
 // @title    RandomString
