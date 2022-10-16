@@ -1,5 +1,5 @@
-// @Title  HourController
-// @Description  该文件用于提供操作小时点集的各种函数
+// @Title  PointController
+// @Description  该文件用于提供操作点集的各种函数
 // @Author  MGAronya（张健）
 // @Update  MGAronya（张健）  2022-9-16 0:33
 package controller
@@ -10,6 +10,7 @@ import (
 	"lianjiang/model"
 	"lianjiang/util"
 	"log"
+	"os"
 	"path"
 	"reflect"
 	"strconv"
@@ -63,7 +64,7 @@ func Upload(ctx *gin.Context) {
 	system := ctx.Params.ByName("system")
 
 	// TODO 从制度表中获取制度映射
-	sys, ok := util.SysMap[system]
+	sys, ok := util.SysMap.Get(system)
 
 	// TODO 如果制度表中未注册
 	if !ok {
@@ -72,7 +73,7 @@ func Upload(ctx *gin.Context) {
 	}
 
 	// TODO 从标记表中获取标记映射
-	opt, ok := util.OptMap[sys]
+	opt, ok := util.OptMap.Get(sys.(string))
 
 	// TODO 如果未注册标记
 	if !ok {
@@ -81,7 +82,7 @@ func Upload(ctx *gin.Context) {
 	}
 
 	// TODO 尝试建立对应文件夹
-	err = util.Mkdir("./home/" + sys)
+	err = util.Mkdir("./home/" + sys.(string))
 
 	if err != nil {
 		response.Fail(ctx, nil, "创建路径失败，系统错误")
@@ -89,10 +90,10 @@ func Upload(ctx *gin.Context) {
 	}
 
 	// TODO 将文件存入本地
-	ctx.SaveUploadedFile(file, "./home/"+sys+"/"+file.Filename)
+	ctx.SaveUploadedFile(file, "./home/"+sys.(string)+"/"+file.Filename)
 
 	// TODO 解析文件
-	res, err := util.Read("./home/" + sys + "/" + file.Filename)
+	res, err := util.Read("./home/" + sys.(string) + "/" + file.Filename)
 
 	// TODO 解析有误
 	if err != nil || res == nil {
@@ -114,22 +115,25 @@ func Upload(ctx *gin.Context) {
 
 	// TODO 用于建立数据库表的模板point
 	var point model.Point
-	point.System = sys
+	point.System = sys.(string)
+
+	// TODO 用于存储站名
+	var stName string
 
 	// TODO 逐行遍历，尝试寻找站名并取出字段映射
 	for i := 0; i < len(res); i++ {
 		for j := 0; j < len(res[i]); j++ {
 			// TODO 成功找到站名
 			if len(res[i][j]) > 18 && res[i][j][0:18] == "自动站名称：" {
-				point.StationName = res[i][j][18:]
+				stName = res[i][j][18:]
 				continue
 			}
 			p := ""
 			// TODO 寻找最长前缀匹配
 			for k := 1; k <= len(res[i][j]); k++ {
-				str, ok := util.PointMap[res[i][j][0:k]]
+				str, ok := util.PointMap.Get(res[i][j][0:k])
 				if ok {
-					p = str
+					p = str.(string)
 				}
 			}
 			// TODO 成功匹配映射字段，则记录该字段
@@ -164,7 +168,7 @@ func Upload(ctx *gin.Context) {
 
 		// 遍历每一列，尝试取出数据
 		for j := 0; j < len(res[i]); j++ {
-			row, ok := util.RowOneMap[res[i][j]]
+			row, ok := util.RowOneMap.Get(res[i][j])
 
 			// 如果是唯一字段
 			if ok {
@@ -181,18 +185,18 @@ func Upload(ctx *gin.Context) {
 				// TODO 存入站名
 				rowOne.StationName = point.StationName
 				// TODO 查看是否存在表
-				if !db.Migrator().HasTable(row + "_row_one") {
+				if !db.Migrator().HasTable(row.(string)) {
 					// TODO 在第一次存入数据前，先尝试建立数据表
 					db.AutoMigrate(&rowOne)
 					// TODO 表名修正
-					db.Migrator().RenameTable(&rowOne, row+"_row_one")
+					db.Migrator().RenameTable(&rowOne, row.(string))
 				}
 				// TODO 存入数据库
-				db.Table(row + "_row_one").Create(&rowOne)
+				db.Table(row.(string)).Create(&rowOne)
 				break
 			}
 
-			row, ok = util.RowAllMap[res[i][j]]
+			row, ok = util.RowAllMap.Get(res[i][j])
 			// 如果是多字段
 			if ok {
 				// TODO 时间有误
@@ -213,14 +217,14 @@ func Upload(ctx *gin.Context) {
 					reflect.ValueOf(&rowAll).Elem().FieldByName(index[k]).SetString(res[i][k])
 				}
 				// TODO 查看是否存在表
-				if !db.Migrator().HasTable(row + "_row_all") {
+				if !db.Migrator().HasTable(row.(string)) {
 					// TODO 在第一次存入数据前，先尝试建立数据表
 					db.AutoMigrate(&rowAll)
 					// TODO 表名修正
-					db.Migrator().RenameTable(&rowAll, row+"_row_all")
+					db.Migrator().RenameTable(&rowAll, row.(string))
 				}
 				// TODO 存入数据库
-				db.Table(row + "_row_all").Create(&rowAll)
+				db.Table(row.(string)).Create(&rowAll)
 				break
 			}
 
@@ -314,27 +318,27 @@ func Upload(ctx *gin.Context) {
 		}
 		// TODO 查看第一次取数据是否找到站名
 		if flag {
-			if point.StationName == "" {
+			if stName == "" {
 				if p.StationName != "" {
-					point.StationName = p.StationName
+					stName = p.StationName
 				} else {
 					response.Fail(ctx, nil, "未能在文件内找到站名")
 					return
 				}
 			}
-			_, ok = util.StationMap[point.StationName]
 			// TODO 如果站名没有注册
-			if !ok {
-				response.Fail(ctx, nil, "站名"+point.StationName+"未注册")
+			if !util.StationMap.Has(stName) {
+				response.Fail(ctx, nil, "站名"+stName+"未注册")
 				return
 			}
-			point.StationName, _ = util.StationMap[point.StationName]
+			st, _ := util.StationMap.Get(stName)
+			point.StationName = st.(string)
 			// TODO 查看是否存在表
-			if !db.Migrator().HasTable(point.System + "_" + point.StationName + "_points") {
+			if !db.Migrator().HasTable(point.System + "_" + point.StationName) {
 				// TODO 在第一次存入数据前，先尝试建立数据表
 				db.AutoMigrate(&point)
 				// TODO 表名修正
-				db.Migrator().RenameTable(&point, point.System+"_"+point.StationName+"_points")
+				db.Migrator().RenameTable(&point, point.System+"_"+point.StationName)
 			}
 			flag = false
 		}
@@ -351,9 +355,24 @@ func Upload(ctx *gin.Context) {
 			endTime = p.Time
 		}
 		// TODO 存入数据库
-		db.Table(point.System + "_" + point.StationName + "_points").Create(&p)
+		db.Table(point.System + "_" + point.StationName).Create(&p)
 	}
-
+	// TODO 创建文件历史记录
+	db.Create(&model.FileHistory{
+		UserId:   user.ID,
+		FileName: file.Filename,
+		FilePath: "/" + sys.(string) + "/" + file.Filename,
+		Option:   "创建",
+	})
+	// TODO 创建数据历史记录
+	db.Create(&model.DataHistory{
+		UserId:      user.ID,
+		Option:      "创建",
+		StartTime:   startTime.String(),
+		EndTime:     endTime.String(),
+		StationName: stName,
+		System:      system,
+	})
 	response.Success(ctx, nil, "更新成功")
 }
 
@@ -374,7 +393,7 @@ func List(ctx *gin.Context) {
 	}
 
 	// TODO 取出请求
-	path := ctx.DefaultQuery("path", "")
+	path := ctx.DefaultQuery("path", "/")
 
 	// TODO 获得hour目录下的所有文件
 	files, err := util.GetFiles(path)
@@ -405,9 +424,45 @@ func Download(ctx *gin.Context) {
 	}
 
 	// TODO 取出请求
-	path := ctx.DefaultQuery("path", "")
+	path := ctx.DefaultQuery("path", "/")
 	file := ctx.DefaultQuery("file", "")
 
 	ctx.Writer.Header().Add("Content-Disposition", fmt.Sprintf("attachment; filename=%s", file))
 	ctx.File("./home" + path)
+	response.Success(ctx, nil, "请求成功")
+}
+
+// @title    DeleteFile
+// @description   删除点集文件
+// @auth      MGAronya（张健）       2022-9-16 12:15
+// @param    ctx *gin.Context       接收一个上下文
+// @return   void
+func DeleteFile(ctx *gin.Context) {
+	tuser, _ := ctx.Get("user")
+
+	user := tuser.(model.User)
+
+	// TODO 安全等级在四级以下的用户不能删除文件
+	if user.Level < 4 {
+		response.Fail(ctx, nil, "权限不足")
+		return
+	}
+
+	// TODO 取出请求
+	path := ctx.DefaultQuery("path", "")
+
+	// TODO 移除文件
+	if os.Remove(path) != nil {
+		response.Fail(ctx, nil, "路径不存在")
+		return
+	}
+
+	// TODO 创建文件历史记录
+	common.GetDB().Create(model.FileHistory{
+		UserId:   user.ID,
+		FilePath: path,
+		Option:   "删除",
+	})
+
+	response.Success(ctx, nil, "删除成功")
 }
