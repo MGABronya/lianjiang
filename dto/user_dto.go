@@ -10,8 +10,9 @@ import (
 
 // UserDto			定义了用户的基本信息
 type UserDto struct {
-	Name  string `gorm:"type:varchar(20);not null"`        // 用户名称
-	Email string `gorm:"type:varchar(50);not null;unique"` // 邮箱
+	Name  string `json:"name"`  // 用户名称
+	Email string `json:"email"` // 邮箱
+	Level int    `json:"level"` // 权限等级
 }
 
 // @title    ToUserDto
@@ -23,5 +24,6 @@ func ToUserDto(user model.User) UserDto {
 	return UserDto{
 		Name:  user.Name,
 		Email: user.Email,
+		Level: user.Level,
 	}
 }
