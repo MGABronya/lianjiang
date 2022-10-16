@@ -38,6 +38,15 @@ func CollectRoute(r *gin.Engine) *gin.Engine {
 	// TODO 用户的个人信息路由
 	r.GET("/personal", middleware.AuthMiddleware(), controller.PersonalPage)
 
+	// TODO 用户设置其它用户等级
+	r.PUT("/level/:id/:level", middleware.AuthMiddleware(), controller.Level)
+
+	// TODO 用户获取用户列表
+	r.GET("/users", middleware.AuthMiddleware(), controller.Users)
+
+	// TODO 通过id和search字段查找某一用户的信息
+	r.GET("/user/:search/:id", middleware.AuthMiddleware(), controller.FindUser)
+
 	// TODO 文件上传
 	r.POST("/upload/:system", middleware.AuthMiddleware(), controller.Upload)
 
@@ -47,7 +56,44 @@ func CollectRoute(r *gin.Engine) *gin.Engine {
 	// TODO 文件下载
 	r.GET("/download", middleware.AuthMiddleware(), controller.Download)
 
-	// TODO 查看当前注册表
+	// TODO 文件删除
+	r.DELETE("/file", middleware.AuthMiddleware(), controller.DeleteFile)
+
+	// TODO 数据获取
+	r.GET("/data/:name/:system/:field", middleware.AuthMiddleware(), controller.ShowData)
+
+	// TODO 获取一对多的行字段
+	r.GET("/data/rowall/:key/:name/:field", middleware.AuthMiddleware(), controller.ShowRowAllData)
+
+	// TODO 获取一对一的行字段
+	r.GET("/data/rowone/:key/:name", middleware.AuthMiddleware(), controller.ShowRowOneData)
+
+	// TODO 数据删除
+	r.DELETE("/data/:time/:start/:end", middleware.AuthMiddleware(), controller.DeleteData)
+
+	// TODO 数据恢复
+	r.PUT("/data/:start/:end", middleware.AuthMiddleware(), controller.RecoverData)
+
+	// TODO 查看用户的文件上传、删除记录
+	r.GET("/history/file/:start/:end", middleware.AuthMiddleware(), controller.FileHistory)
+
+	// TODO 查看用户的数据上传、删除记录
+	r.GET("/history/data/:start/:end", middleware.AuthMiddleware(), controller.DataHistory)
+
+	// TODO 查看映射主键
+	r.GET("/map/:id", middleware.AuthMiddleware(), controller.ShowMapKeys)
+
+	// TODO 查看映射键的值
+	r.GET("/map/:id/:key", middleware.AuthMiddleware(), controller.ShowMapValue)
+
+	// TODO 通过同名键值创建映射
+	r.PUT("/map/:id", middleware.AuthMiddleware(), controller.CreateMapKey)
+
+	// TODO 更新映射键值对
+	r.PUT("/map/:id/:key", middleware.AuthMiddleware(), controller.CreateMapValue)
+
+	// TODO 删除映射
+	r.DELETE("/map/:id/:key", middleware.AuthMiddleware(), controller.DeleteMapKey)
 
 	return r
 }
