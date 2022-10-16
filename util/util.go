@@ -11,6 +11,7 @@ import (
 	"io/ioutil"
 	"lianjiang/common"
 	"lianjiang/model"
+	"lianjiang/vo"
 	"math"
 	"math/rand"
 	"net/smtp"
@@ -18,6 +19,8 @@ import (
 	"regexp"
 	"strconv"
 	"time"
+
+	Map "github.com/orcaman/concurrent-map"
 
 	"os"
 
@@ -31,101 +34,134 @@ import (
 )
 
 // 点集字段映射表
-var PointMap = map[string]string{
-	"监测断面":     "StationName",
-	"监测指标":     "Time",
-	"监测时间":     "Time",
-	"时间":       "Time",
-	"水温":       "Temperature",
-	"pH":       "PH",
-	"化学需氧量":    "Cod",
-	"五日生化需氧量":  "FiveDaysNiochemicalOxygenDemand",
-	"硒":        "Se",
-	"砷":        "As",
-	"汞":        "Hg",
-	"氟化物":      "Fluoride",
-	"石油类":      "Petroleum",
-	"粪大肠菌群":    "FecalColiform",
-	"溶解氧":      "DO",
-	"电导率":      "EC",
-	"浊度":       "Turbidity",
-	"高锰酸盐指数":   "CODMII",
-	"氨氮":       "NH_N",
-	"总磷":       "TP",
-	"总氮":       "TN",
-	"CODcr":    "CODcr",
-	"氰化物":      "CN",
-	"挥发酚":      "VolatilePenol",
-	"六价铬":      "Cr",
-	"铜":        "Cu",
-	"锌":        "Zn",
-	"铅":        "Pb",
-	"镉":        "Cd",
-	"阴离子表面活性剂": "LAS",
-	"硫化物":      "SOx",
-	"累计流量":     "CumulativeDischarge",
-	"水流量":      "WaterDischarge",
-	"总累积流量":    "TotalCumulativeFlow",
-	"水位":       "WaterLevel",
-	"时段累积流量":   "PeriodCumulativeFlow",
-	"断面平均流速":   "SectionalMeanVelocity",
-	"当前瞬时流速":   "CurrentInstantaneousVelocity",
-	"瞬时流量":     "InstantaneousDelivery",
-	"断面面积":     "SectionalArea",
-}
+var PointMap Map.ConcurrentMap = Map.New()
 
 // 行唯一字段映射表
-var RowOneMap = map[string]string{
-	"水质类别":  "water_quality_classification",
-	"主要污染物": "key_pollutant",
-}
+var RowOneMap Map.ConcurrentMap = Map.New()
 
 // 行多字段映射表
-var RowAllMap = map[string]string{
-	"分项类别": "item_category",
-}
+var RowAllMap Map.ConcurrentMap = Map.New()
 
 // 制度映射表
-var SysMap = map[string]string{
-	"小时制": "hour",
-	"月度制": "month",
-}
+var SysMap Map.ConcurrentMap = Map.New()
 
 // 文件内容的标记点映射表
-var OptMap = map[string]string{
-	"hour":  "时间",
-	"month": "监测断面",
-}
+var OptMap Map.ConcurrentMap = Map.New()
 
 // 站名注册表
-var StationMap = map[string]string{
-	"海门湾桥闸":  "haimen_bay_bridge_gate",
-	"汕头练江水站": "lian_jiang_water_station",
-	"青洋山桥":   "lian_jiang_water_station",
-	"新溪西村":   "xinxi_village",
-	"万兴桥":    "wanxing_bridge",
-	"流仙学校":   "liuxian_school",
-	"仙马闸":    "xianma_brake",
-	"华侨学校":   "huaqiao_school",
-	"港洲桥":    "gangzhou_bridge",
-	"云陇":     "yunlong",
-	"北港水":    "beixiangshui",
-	"官田水":    "guantianshui",
-	"北港河闸":   "beixiang_penstock",
-	"峡山大溪":   "xiashan_stream",
-	"井仔湾闸":   "jingzai_wan_sluice",
-	"东北支流":   " northeast_branch",
-	"西埔桥闸":   "xipu_bridge_sluice",
-	"五福桥":    "wufu_bridge",
-	"成田大寮":   "narita_daliao",
-	"新坛港":    "xitan_port",
-	"瑶池港":    "yaochi_port",
-	"护城河闸":   "moat_locks",
-	"和平桥":    "peace_bridge",
-}
+var StationMap Map.ConcurrentMap = Map.New()
 
 // 数据注册表
-var DataMap = map[string]float64{}
+var DataMap Map.ConcurrentMap = Map.New()
+
+// 用户字段映射表
+var UserMap = map[string]string{
+	"名称": "name",
+	"邮箱": "email",
+	"ID": "id",
+}
+
+// 映射表
+var MapMap = map[string]*Map.ConcurrentMap{
+	"列字段映射":    &PointMap,
+	"行字段一对多映射": &RowAllMap,
+	"行字段一对一映射": &RowOneMap,
+	"时间制映射":    &SysMap,
+	"标记映射":     &OptMap,
+	"站名映射":     &StationMap,
+	"数据符号映射":   &DataMap,
+}
+
+// 时间映射表
+var TimeMap = map[string]string{
+	"创建日期": "created_at",
+	"记录日期": "time",
+	"删除日期": "deleted_at",
+}
+
+func init() {
+	// TODO 初始化点集字段映射表
+	PointMap.Set("监测断面", "StationName")
+	PointMap.Set("监测指标", "Time")
+	PointMap.Set("监测时间", "Time")
+	PointMap.Set("时间", "Time")
+	PointMap.Set("水温", "Temperature")
+	PointMap.Set("pH", "PH")
+	PointMap.Set("化学需氧量", "Cod")
+	PointMap.Set("五日生化需氧量", "FiveDaysNiochemicalOxygenDemand")
+	PointMap.Set("硒", "Se")
+	PointMap.Set("砷", "As")
+	PointMap.Set("汞", "Hg")
+	PointMap.Set("氟化物", "Fluoride")
+	PointMap.Set("石油类", "Petroleum")
+	PointMap.Set("粪大肠菌群", "FecalColiform")
+	PointMap.Set("溶解氧", "DO")
+	PointMap.Set("电导率", "EC")
+	PointMap.Set("浊度", "Turbidity")
+	PointMap.Set("高锰酸盐指数", "CODMII")
+	PointMap.Set("氨氮", "NH_N")
+	PointMap.Set("总磷", "TP")
+	PointMap.Set("总氮", "TN")
+	PointMap.Set("CODcr", "CODcr")
+	PointMap.Set("氰化物", "CN")
+	PointMap.Set("挥发酚", "VolatilePenol")
+	PointMap.Set("六价铬", "Cr")
+	PointMap.Set("铜", "Cu")
+	PointMap.Set("锌", "Zn")
+	PointMap.Set("铅", "Pb")
+	PointMap.Set("镉", "Cd")
+	PointMap.Set("阴离子表面活性剂", "LAS")
+	PointMap.Set("硫化物", "SOx")
+	PointMap.Set("累计流量", "CumulativeDischarge")
+	PointMap.Set("水流量", "WaterDischarge")
+	PointMap.Set("总累积流量", "TotalCumulativeFlow")
+	PointMap.Set("水位", "WaterLevel")
+	PointMap.Set("时段累积流量", "PeriodCumulativeFlow")
+	PointMap.Set("断面平均流速", "SectionalMeanVelocity")
+	PointMap.Set("当前瞬时流速", "CurrentInstantaneousVelocity")
+	PointMap.Set("瞬时流量", "InstantaneousDelivery")
+	PointMap.Set("断面面积", "SectionalArea")
+
+	// TODO 初始行唯一字段映射表
+	RowOneMap.Set("水质类别", "water_quality_classification")
+	RowOneMap.Set("主要污染物", "key_pollutant")
+
+	// TODO 初始化行多字段映射表
+	RowAllMap.Set("分项类别", "item_category")
+
+	// TODO 初始化制度映射表
+	SysMap.Set("小时制", "hour")
+	SysMap.Set("月度制", "month")
+
+	// TODO 文件内容的标记点映射表
+	OptMap.Set("hour", "时间")
+	OptMap.Set("month", "监测断面")
+
+	// TODO 站名注册表
+	StationMap.Set("海门湾桥闸", "haimen_bay_bridge_gate")
+	StationMap.Set("汕头练江水站", "lian_jiang_water_station")
+	StationMap.Set("青洋山桥", "lian_jiang_water_station")
+	StationMap.Set("新溪西村", "xinxi_village")
+	StationMap.Set("万兴桥", "wanxing_bridge")
+	StationMap.Set("流仙学校", "liuxian_school")
+	StationMap.Set("仙马闸", "xianma_brake")
+	StationMap.Set("华侨学校", "huaqiao_school")
+	StationMap.Set("港洲桥", "gangzhou_bridge")
+	StationMap.Set("云陇", "yunlong")
+	StationMap.Set("北港水", "beixiangshui")
+	StationMap.Set("官田水", "guantianshui")
+	StationMap.Set("北港河闸", "beixiang_penstock")
+	StationMap.Set("峡山大溪", "xiashan_stream")
+	StationMap.Set("井仔湾闸", "jingzai_wan_sluice")
+	StationMap.Set("东北支流", "northeast_branch")
+	StationMap.Set("西埔桥闸", "xipu_bridge_sluice")
+	StationMap.Set("五福桥", "wufu_bridge")
+	StationMap.Set("成田大寮", "narita_daliao")
+	StationMap.Set("新坛港", "xitan_port")
+	StationMap.Set("瑶池港", "yaochi_port")
+	StationMap.Set("护城河闸", "moat_locks")
+	StationMap.Set("和平桥", "peace_bridge")
+}
 
 // @title    Read
 // @description   读取文件内容
@@ -229,23 +265,41 @@ func ReadXlsx(file_path string) (res [][]string, err error) {
 	return res, nil
 }
 
+// @title    SecondToTime
+// @description   把秒级的时间戳转为time格式
+// @auth      MGAronya（张健）             2022-9-16 10:29
+// @param     sec int64	秒
+// @return    time.Time    Time类型
+func SecondToTime(sec int64) time.Time {
+	return time.Unix(sec, 0)
+}
+
 // @title    GetFiles
 // @description   获取一个目录下的所有文件
 // @auth      MGAronya（张健）             2022-9-16 10:29
 // @param     folder string	指定目录
 // @return    []string    所有文件的文件名
-func GetFiles(folder string) []string {
-	files, _ := ioutil.ReadDir(folder)
-	res := make([]string, 10)
-	for _, file := range files {
-		if file.IsDir() {
-			GetFiles(folder + file.Name())
-			continue
-		} else {
-			res = append(res, file.Name())
-		}
+func GetFiles(folder string) ([]vo.File, error) {
+	files, err := ioutil.ReadDir("./home" + folder)
+	if err != nil {
+		return nil, err
 	}
-	return res
+	res := make([]vo.File, 0)
+	for _, file := range files {
+		// TODO 尝试读出所有文件的相关信息
+		var f vo.File
+		f.Name = file.Name()
+		f.Path = folder + file.Name()
+		f.Size = file.Size()
+		f.LastWriteTime = file.ModTime()
+		if file.IsDir() {
+			f.Type = "Dir"
+		} else {
+			f.Type = path.Ext(file.Name())
+		}
+		res = append(res, f)
+	}
+	return res, nil
 }
 
 // @title    PathExists
@@ -292,9 +346,9 @@ func Mkdir(dir string) error {
 // @return    float64, bool		表示解析出来的浮点数，ok表示解析是否成功
 func StringToFloat(s string) (float64, bool) {
 	// TODO 优先查看数据注册表
-	data, ok := DataMap[s]
+	data, ok := DataMap.Get(s)
 	if ok {
-		return data, ok
+		return data.(float64), ok
 	}
 	k := len(s)
 	// TODO 尝试取出前缀数字，以此来滤过符号单位
