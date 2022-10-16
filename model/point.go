@@ -6,6 +6,8 @@ package model
 
 import (
 	"time"
+
+	"gorm.io/gorm"
 )
 
 // Point			定义点集
@@ -50,4 +52,5 @@ type Point struct { // 点的id
 	CurrentInstantaneousVelocity    float64   `json:"current_instantaneous_velocity" gorm:"type:double;"`         // 当前瞬时流速
 	InstantaneousDelivery           float64   `json:"instantaneous_delivery" gorm:"type:double;"`                 // 瞬时流量
 	CreatedAt                       Time      `json:"created_at" gorm:"type:timestamp"`                           // 记录的存入日期
+	DeletedAt 						gorm.DeletedAt `gorm:"index"`												  // 软删除
 }
