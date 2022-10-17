@@ -80,6 +80,9 @@ func CollectRoute(r *gin.Engine) *gin.Engine {
 	// TODO 查看用户的数据上传、删除记录
 	r.GET("/history/data/:start/:end", middleware.AuthMiddleware(), controller.DataHistory)
 
+	// TODO 查看用户的映射上传、删除记录
+	r.GET("/history/map/:start/:end", middleware.AuthMiddleware(), controller.MapHistory)
+
 	// TODO 查看映射主键
 	r.GET("/map/:id", middleware.AuthMiddleware(), controller.ShowMapKeys)
 
@@ -94,6 +97,12 @@ func CollectRoute(r *gin.Engine) *gin.Engine {
 
 	// TODO 删除映射
 	r.DELETE("/map/:id/:key", middleware.AuthMiddleware(), controller.DeleteMapKey)
+
+	// TODO 查看映射备份
+	r.GET("/map/:id/:start/:end", middleware.AuthMiddleware(), controller.BackupMap)
+
+	// TODO 预测
+	r.GET("/forecast", middleware.AuthMiddleware(), controller.Forecast)
 
 	return r
 }

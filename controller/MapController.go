@@ -238,6 +238,48 @@ func DeleteMapKey(ctx *gin.Context) {
 	// TODO 删除值
 	M.Remove(key)
 
-	// TODO 返回所有value
 	response.Success(ctx, nil, "删除成功")
+}
+
+// @title    BackupMap
+// @description   查看映射备份
+// @auth      MGAronya（张健）       2022-9-16 12:15
+// @param    ctx *gin.Context       接收一个上下文
+// @return   void
+func BackupMap(ctx *gin.Context) {
+	// TODO 获取登录用户
+	tuser, _ := ctx.Get("user")
+
+	user := tuser.(model.User)
+
+	// TODO 安全等级在二级以下的用户不能操作映射表
+	if user.Level < 4 {
+		response.Fail(ctx, nil, "权限不足")
+		return
+	}
+
+	// TODO 获取path中的id
+	id := ctx.Params.ByName("id")
+
+	// TODO 获取path中的start
+	start := ctx.Params.ByName("start")
+
+	// TODO 获取path中的end
+	end := ctx.Params.ByName("end")
+
+	_, ok := util.MapMap[id]
+
+	if !ok {
+		response.Fail(ctx, nil, "不存在该映射表")
+		return
+	}
+
+	db := common.GetDB()
+
+	var backupMaps []model.MapBackup
+
+	db.Where("id = ? and create_at >= ? and created_at >= ?", id, start, end).Find(backupMaps)
+
+	// TODO 返回所有数值
+	response.Success(ctx, gin.H{"backupMaps": backupMaps}, "查看成功")
 }
