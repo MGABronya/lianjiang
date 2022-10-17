@@ -99,7 +99,7 @@ func CollectRoute(r *gin.Engine) *gin.Engine {
 	r.DELETE("/map/:id/:key", middleware.AuthMiddleware(), controller.DeleteMapKey)
 
 	// TODO 查看映射备份
-	r.GET("/map/:id/:start/:end", middleware.AuthMiddleware(), controller.BackupMap)
+	r.GET("/map/backup/:id/:start/:end", middleware.AuthMiddleware(), controller.BackupMap)
 
 	// TODO 预测
 	r.GET("/forecast", middleware.AuthMiddleware(), controller.Forecast)

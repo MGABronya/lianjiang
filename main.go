@@ -80,7 +80,7 @@ func BackUp() {
 		for _, key := range v.Keys() {
 			value, _ := v.Get(key)
 			db.Create(&model.MapBackup{
-				Id:    id,
+				Table: id,
 				Key:   key,
 				Value: fmt.Sprint(value),
 			})
