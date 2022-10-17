@@ -5,6 +5,8 @@
 package controller
 
 import (
+	"fmt"
+	"lianjiang/common"
 	"lianjiang/model"
 	"lianjiang/response"
 	"lianjiang/util"
@@ -121,6 +123,15 @@ func CreateMapKey(ctx *gin.Context) {
 		return
 	}
 
+	// TODO 做历史记录
+	common.GetDB().Create(&model.MapHistory{
+		UserId: user.ID,
+		Id:     id,
+		Key:    key1,
+		Value:  fmt.Sprint(value),
+		Option: "创建",
+	})
+
 	// TODO 设置值
 	M.Set(key2, value)
 
@@ -164,6 +175,15 @@ func CreateMapValue(ctx *gin.Context) {
 	// TODO 设置值
 	M.Set(key, value)
 
+	// TODO 做历史记录
+	common.GetDB().Create(&model.MapHistory{
+		UserId: user.ID,
+		Id:     id,
+		Key:    key,
+		Value:  fmt.Sprint(value),
+		Option: "创建",
+	})
+
 	// TODO 返回所有value
 	response.Success(ctx, nil, "设置成功")
 }
@@ -197,6 +217,23 @@ func DeleteMapKey(ctx *gin.Context) {
 		response.Fail(ctx, nil, "不存在该映射表")
 		return
 	}
+
+	value, ok := M.Get(key)
+
+	// TODO 检查键值是否存在
+	if !ok {
+		response.Fail(ctx, nil, "键值不存在")
+		return
+	}
+
+	// TODO 做历史记录
+	common.GetDB().Create(&model.MapHistory{
+		UserId: user.ID,
+		Id:     id,
+		Key:    key,
+		Value:  fmt.Sprint(value),
+		Option: "删除",
+	})
 
 	// TODO 删除值
 	M.Remove(key)

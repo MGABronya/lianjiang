@@ -139,3 +139,67 @@ func DataHistory(ctx *gin.Context) {
 	response.Success(ctx, gin.H{"dataHistorys": dataHistorys}, "请求成功")
 
 }
+
+// @title    MapHistory
+// @description   提供映射的操作记录
+// @auth      MGAronya（张健）       2022-9-16 12:15
+// @param    ctx *gin.Context       接收一个上下文
+// @return   void
+func MapHistory(ctx *gin.Context) {
+	// TODO 获取登录用户
+	tuser, _ := ctx.Get("user")
+
+	user := tuser.(model.User)
+
+	// TODO 安全等级在四级以下的用户不能查看历史操作记录
+	if user.Level < 4 {
+		response.Fail(ctx, nil, "权限不足")
+		return
+	}
+
+	db := common.GetDB().Table("map_historys")
+
+	var mapHistorys []model.MapHistory
+
+	// TODO 读取参数请求
+	start := ctx.Params.ByName("id")
+
+	if start != "" {
+		db = db.Where("created_at >= ", start)
+	}
+
+	end := ctx.Params.ByName("end")
+
+	if end != "" {
+		db = db.Where("created_at <= ", end)
+	}
+
+	// TODO 取出表id
+	Id := ctx.DefaultQuery("id", "")
+
+	if Id != "" {
+		db = db.Where("id = ?", Id)
+	}
+
+	// TODO 操作方式
+	option := ctx.DefaultQuery("option", "")
+
+	if option != "" {
+		db = db.Where("option = ?", option)
+	}
+
+	// TODO 取出用户id
+	userId := ctx.DefaultQuery("userId", "")
+
+	if userId != "" {
+		db = db.Where("user_id = ?", userId)
+	}
+
+	if db.Find(mapHistorys).Error != nil {
+		response.Fail(ctx, nil, "参数有误")
+		return
+	}
+
+	response.Success(ctx, gin.H{"mapHistorys": mapHistorys}, "请求成功")
+
+}
