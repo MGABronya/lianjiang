@@ -141,7 +141,7 @@ func Upload(ctx *gin.Context) {
 				index[j] = p
 			}
 			// TODO 遇到标记
-			if res[i][j] == opt {
+			if res[i][j] == opt.(string) {
 				flag = true
 			}
 		}

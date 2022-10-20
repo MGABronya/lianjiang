@@ -60,10 +60,10 @@ func CollectRoute(r *gin.Engine) *gin.Engine {
 	r.DELETE("/file", middleware.AuthMiddleware(), controller.DeleteFile)
 
 	// TODO 数据获取
-	r.GET("/data/:name/:system/:field", middleware.AuthMiddleware(), controller.ShowData)
+	r.GET("/data/:name/:system", middleware.AuthMiddleware(), controller.ShowData)
 
 	// TODO 获取一对多的行字段
-	r.GET("/data/rowall/:key/:name/:field", middleware.AuthMiddleware(), controller.ShowRowAllData)
+	r.GET("/data/rowall/:key/:name", middleware.AuthMiddleware(), controller.ShowRowAllData)
 
 	// TODO 获取一对一的行字段
 	r.GET("/data/rowone/:key/:name", middleware.AuthMiddleware(), controller.ShowRowOneData)

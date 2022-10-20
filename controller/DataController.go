@@ -8,7 +8,6 @@ import (
 	"lianjiang/common"
 	"lianjiang/model"
 	"lianjiang/util"
-	"lianjiang/vo"
 	"time"
 
 	"lianjiang/response"
@@ -268,15 +267,20 @@ func ShowData(ctx *gin.Context) {
 
 	tableName := system.(string) + "_" + name.(string)
 
-	// TODO 获取path中的field
-	f := ctx.Params.ByName("field")
+	// TODO 获取path中的fields
+	f := ctx.QueryArray("fields")
 
-	field, ok := util.DataMap.Get(f)
-
-	if !ok {
-		response.Fail(ctx, nil, "不存在字段"+f)
-		return
+	fields := make([]string, len(f), len(f))
+	for i, v := range f {
+		field, ok := util.PointMap.Get(v)
+		if !ok {
+			response.Fail(ctx, nil, "不存在字段"+v)
+			return
+		}
+		fields[i] = util.StringToSql(field.(string))
 	}
+
+	fields = append(fields, "time")
 
 	db := common.GetDB()
 
@@ -294,8 +298,11 @@ func ShowData(ctx *gin.Context) {
 
 	db.Table(tableName).Where("time >= ? and time <= ?", start, end).Count(&total)
 
-	resultArr := make([]vo.Point, total, total)
-	db.Table(tableName).Select([]string{field.(string)}).Where("time >= ? and time <= ?", start, end).Scan(&resultArr)
+	// TODO 查找对应数组
+
+	resultArr := make([]map[string]interface{}, 0)
+
+	db.Table(tableName).Select(fields).Where("time >= ? and time <= ?", start, end).Scan(&resultArr)
 
 	response.Success(ctx, gin.H{"resultArr": resultArr}, "查找成功")
 }
@@ -327,15 +334,21 @@ func ShowRowAllData(ctx *gin.Context) {
 		return
 	}
 
-	// TODO 获取path中的field
-	f := ctx.Params.ByName("field")
+	// TODO 获取path中的fields
+	f := ctx.QueryArray("fields")
 
-	field, ok := util.DataMap.Get(f)
-
-	if !ok {
-		response.Fail(ctx, nil, "不存在字段"+f)
-		return
+	fields := make([]string, len(f), len(f))
+	for i, v := range f {
+		field, ok := util.PointMap.Get(v)
+		if !ok {
+			response.Fail(ctx, nil, "不存在字段"+v)
+			return
+		}
+		fields[i] = util.StringToSql(field.(string))
 	}
+
+	fields = append(fields, "start_time")
+	fields = append(fields, "end_time")
 
 	db := common.GetDB()
 
@@ -354,9 +367,10 @@ func ShowRowAllData(ctx *gin.Context) {
 
 	db.Table(key.(string)).Where("start_time >= ? and end_time <= ?", start, end).Count(&total)
 
-	// TODO 搜索数据
-	resultArr := make([]vo.Data, total, total)
-	db.Table(key.(string)).Select([]string{field.(string)}).Where("station_name = ? and start_time >= ? and end_time <= ?", name.(string), start, end).Scan(&resultArr)
+	// TODO 查找对应数组
+	resultArr := make([]map[string]interface{}, 0)
+
+	db.Table(key.(string)).Select(fields).Where("start_time >= ? and end_time <= ?", name.(string), start, end).Scan(&resultArr)
 
 	response.Success(ctx, gin.H{"resultArr": resultArr}, "查找成功")
 }
@@ -405,9 +419,9 @@ func ShowRowOneData(ctx *gin.Context) {
 
 	db.Table(key.(string)).Where("start_time >= ? and end_time <= ?", start, end).Count(&total)
 
-	// TODO 搜索数据
-	resultArr := make([]vo.Data, total, total)
-	db.Table(key.(string)).Select([]string{"detail"}).Where("station_name = ? and start_time >= ? and end_time <= ?", name.(string), start, end).Scan(&resultArr)
+	// TODO 查找对应数组
+	resultArr := make([]map[string]interface{}, 0)
+	db.Table(key.(string)).Select([]string{"detail", "start_time", "end_time"}).Where("station_name = ? and start_time >= ? and end_time <= ?", name.(string), start, end).Scan(&resultArr)
 
 	response.Success(ctx, gin.H{"resultArr": resultArr}, "查找成功")
 }
