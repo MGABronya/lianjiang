@@ -304,6 +304,7 @@ func ShowData(ctx *gin.Context) {
 
 	db.Table(tableName).Select(fields).Where("time >= ? and time <= ?", start, end).Scan(&resultArr)
 
+
 	response.Success(ctx, gin.H{"resultArr": resultArr}, "查找成功")
 }
 

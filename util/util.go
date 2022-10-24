@@ -18,7 +18,9 @@ import (
 	"path"
 	"regexp"
 	"strconv"
+	"strings"
 	"time"
+	"unicode"
 
 	Map "github.com/orcaman/concurrent-map"
 
@@ -161,6 +163,29 @@ func init() {
 	StationMap.Set("瑶池港", "yaochi_port")
 	StationMap.Set("护城河闸", "moat_locks")
 	StationMap.Set("和平桥", "peace_bridge")
+}
+
+// @title    StringToSql
+// @description   将model字段转化为数据库字段
+// @auth      MGAronya（张健）             2022-9-16 10:29
+// @param     point string			输入字符串
+// @return    sql string			sql格式的字段
+func StringToSql(point string) (sql string) {
+	if len(point) <= 6 {
+		return strings.ToLower(point)
+	}
+	var res = ""
+
+	for _, val := range point {
+		// TODO 是否大写
+		if unicode.IsUpper(val) {
+			if res != "" {
+				res += "_"
+			}
+		}
+		res += string(val)
+	}
+	return strings.ToLower(res)
 }
 
 // @title    Read
@@ -408,42 +433,6 @@ func VerifyEmailFormat(email string) bool {
 
 	reg := regexp.MustCompile(pattern)
 	return reg.MatchString(email)
-}
-
-// @title    VerifyMobileFormat
-// @description   用于验证手机号格式是否正确的工具函数
-// @auth      MGAronya（张健）             2022-9-16 10:29
-// @param     mobileNum string		一串字符串，表示手机号
-// @return    bool    返回是否合法
-func VerifyMobileFormat(mobileNum string) bool {
-	regular := "^((13[0-9])|(14[5,7])|(15[0-3,5-9])|(17[0,3,5-8])|(18[0-9])|166|198|199|(147))\\d{8}$"
-
-	reg := regexp.MustCompile(regular)
-	return reg.MatchString(mobileNum)
-}
-
-// @title    VerifyQQFormat
-// @description   用于验证QQ号格式是否正确的工具函数
-// @auth      MGAronya（张健）             2022-9-16 10:29
-// @param     QQNum string		一串字符串，表示QQ
-// @return    bool    返回是否合法
-func VerifyQQFormat(QQNum string) bool {
-	regular := "[1-9][0-9]{4,10}"
-
-	reg := regexp.MustCompile(regular)
-	return reg.MatchString(QQNum)
-}
-
-// @title    VerifyQQFormat
-// @description  用于验证Icon是否为默认图片的工具函数
-// @auth      MGAronya（张健）             2022-9-16 10:29
-// @param     Icon string		一串字符串，表示图像名称
-// @return    bool    返回是否合法
-func VerifyIconFormat(Icon string) bool {
-	regular := "MGA[1-9].jpg"
-
-	reg := regexp.MustCompile(regular)
-	return reg.MatchString(Icon)
 }
 
 // @title    isEmailExist

@@ -291,33 +291,33 @@
 
 - ## 数据相关
 
-  - **接口地址：/data/:name/:system/:field**
+  - **接口地址：/data/:name/:system**
 
     **功能：数据获取**
 
     **方法类型：GET**
 
-    请求参数：Authorization中的Bearer Token中提供注册、登录时给出的token，在name处给出站名，必须在**站名映射**中存在，在system处给出时间制，必须在**时间制映射**中存在，在field中给出字段，必须在**列字段映射**中存在，在Params处提供start和end，表示初始时间和终止时间，当start为空值则不受start限制，end为空值则不受end限制
+    请求参数：Authorization中的Bearer Token中提供注册、登录时给出的token，在name处给出站名，必须在**站名映射**中存在，在system处给出时间制，必须在**时间制映射**中存在，在Params处提供fields，start和end，start和end表示初始时间和终止时间，fields表示field数组，每个field表示需要查找的字段，必须在**列字段映射**中存在，当start为空值则不受start限制，end为空值则不受end限制
 
     返回值：返回resultArr数组，表示在start和end时间之间的表中数据，其每个元素包含time和field，分别表示记录时间和字段的值
 
-  - **接口地址：/data/rowall/:key/:name/:field**
+  - **接口地址：/data/rowall/:key/:name**
 
     **功能：获取一对多的行字段数据**
 
     **方法类型：GET**
 
-    请求参数：Authorization中的Bearer Token中提供注册、登录时给出的token，在key处给出一对多的主键，必须在**行字段一对多映射**中存在，在name处给出站名，必须在**站名映射**中存在，在field中给出字段，必须在**列字段映射**中存在，在Params处提供start和end，表示初始时间和终止时间，当start为空值则不受start限制，end为空值则不受end限制
+    请求参数：Authorization中的Bearer Token中提供注册、登录时给出的token，在key处给出一对多的主键，必须在**行字段一对多映射**中存在，在name处给出站名，必须在**站名映射**中存在，在Params处提供fields、start和end，fields表示一个数组，其元素必须在**列字段映射**存在，表示初始时间和终止时间，当start为空值则不受start限制，end为空值则不受end限制
 
     返回值：返回resultArr数组，表示在start和end时间之间的表中数据，其每个元素包含start_time、end_time和field，分别表示记录时间段和字段的值
 
-  - **接口地址：/data/rowone/:key/:name/:field**
+  - **接口地址：/data/rowone/:key/:name**
 
     **功能：获取一对一的行字段数据**
 
     **方法类型：GET**
 
-    请求参数：Authorization中的Bearer Token中提供注册、登录时给出的token，在key处给出一对一的主键，必须在**行字段一对一映射**中存在，在name处给出站名，必须在**站名映射**中存在，在field中给出字段，必须在**列字段映射**中存在，在Params处提供start和end，表示初始时间和终止时间，当start为空值则不受start限制，end为空值则不受end限制
+    请求参数：Authorization中的Bearer Token中提供注册、登录时给出的token，在key处给出一对一的主键，必须在**行字段一对一映射**中存在，在name处给出站名，必须在**站名映射**中存在，在Params处提供start和end，表示初始时间和终止时间，当start为空值则不受start限制，end为空值则不受end限制
 
     返回值：返回resultArr数组，表示在start和end时间之间的表中数据，其每个元素包含start_time、end_time和field，分别表示记录时间段和字段的值
 
@@ -362,3 +362,25 @@
     请求参数：需要当前登录用户拥有4及以上安全等级。Authorization中的Bearer Token中提供注册、登录时给出的token，在start处给出起始时间，在end处给出终止时间，当start为空值则不受start限制，end为空值则不受end限制。在Params处提供id（可选）、option（可选）、station_name（可选）、system（可选），id表示用户id，option表示操作类型，如不为空则必须为"创建"或"删除"，station_name表示站名，如不为空则必须在**站名映射**中存在，system表示时间制，如果为空则必须在**时间制映射**中存在。
 
     返回值：返回dataHistorys，其为dataHistory数组，每个dataHistory包含了user_id、created_at、start_time、end_time、option、station_name、system、time，user_id表示用户id，created_at表示历史记录创建日期，start_time，end_time和time表示操作的时间区间为参考字段time大于等于start_time小于等于end_time，station_name表示站名，system表示时间制
+    
+  - **接口地址：/history/map/:start/:end**
+  
+    **功能：查看用户的映射上传、删除记录**
+  
+    **方法类型：GET**
+  
+    请求参数：需要当前登录用户拥有4及以上安全等级。Authorization中的Bearer Token中提供注册、登录时给出的token，在start处给出起始时间，在end处给出终止时间，当start为空值则不受start限制，end为空值则不受end限制。在Params处提供id（可选）、option（可选）、station_name（可选）、system（可选），id表示表名，option表示操作类型，如不为空则必须为"创建"或"删除"，user_id表示操作者名称。
+  
+    返回值：返回mapHistorys，其为mapHistory数组，每个mapHistory包含了id、user_id、created_at、option、key、value，id表示表名称，user_id表示用户id，created_at表示历史记录创建日期，key表示主键，value表示值。
+  
+  - **接口地址：/map/backup/:id/:start/:end**
+  
+    **功能：查看映射的备份**
+  
+    **方法类型：GET**
+  
+    请求参数：需要当前登录用户拥有4及以上安全等级。Authorization中的Bearer Token中提供注册、登录时给出的token，在id处给出表名，在start处给出起始时间，在end处给出终止时间。
+  
+    返回值：返回backupMaps，其为backupMap数组，每个backupMap包含了create_at,id,key,value,其中create_at表示备份的创建时间，table表示映射表名，key表示主键，value表示值。
+    
+    
