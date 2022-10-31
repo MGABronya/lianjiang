@@ -5,10 +5,15 @@
 package controller
 
 import (
+	"bytes"
 	"lianjiang/common"
 	"lianjiang/model"
 	"lianjiang/util"
+	"log"
+	"os/exec"
+	"strconv"
 	"time"
+	"unicode"
 
 	"lianjiang/response"
 
@@ -425,4 +430,42 @@ func ShowRowOneData(ctx *gin.Context) {
 	db.Table(key.(string)).Select([]string{"detail", "start_time", "end_time"}).Where("station_name = ? and start_time >= ? and end_time <= ?", name.(string), start, end).Scan(&resultArr)
 
 	response.Success(ctx, gin.H{"resultArr": resultArr}, "查找成功")
+}
+
+
+// @title    Forecast
+// @description   进行数据预测
+// @auth      MGAronya（张健）       2022-9-16 12:15
+// @param    ctx *gin.Context       接收一个上下文
+// @return   void
+func Forecast(ctx *gin.Context) {
+	// TODO 读取数据
+	Temperature := ctx.Query("Temperature")
+	PH := ctx.Query("PH")
+	Turbidity := ctx.Query("Turbidity")
+	DO := ctx.Query("DO")
+
+	// python main.py
+	cmd := exec.Command("python", "main.py", "--Temperature", Temperature, "--PH", PH, "--Turbidity", Turbidity, "--DO", DO)
+	var out, stderr bytes.Buffer
+	cmd.Stderr = &stderr
+	cmd.Stdout = &out
+	if err := cmd.Run(); err != nil {
+		log.Fatalln(err, stderr.String())
+	}
+	res := out.String()
+
+	var data []float64
+
+	before := 0
+
+	for i, s := range []rune(res) {
+		if s != '.' && !unicode.IsDigit(s) {
+			data1, _ := strconv.ParseFloat(res[before:i], 64)
+			before = i + 1
+			data = append(data, data1)
+		}
+	}
+
+	response.Success(ctx, gin.H{"data": data}, "查找成功")
 }
