@@ -309,7 +309,6 @@ func ShowData(ctx *gin.Context) {
 
 	db.Table(tableName).Select(fields).Where("time >= ? and time <= ?", start, end).Scan(&resultArr)
 
-
 	response.Success(ctx, gin.H{"resultArr": resultArr}, "查找成功")
 }
 
@@ -432,7 +431,6 @@ func ShowRowOneData(ctx *gin.Context) {
 	response.Success(ctx, gin.H{"resultArr": resultArr}, "查找成功")
 }
 
-
 // @title    Forecast
 // @description   进行数据预测
 // @auth      MGAronya（张健）       2022-9-16 12:15
@@ -445,13 +443,20 @@ func Forecast(ctx *gin.Context) {
 	Turbidity := ctx.Query("Turbidity")
 	DO := ctx.Query("DO")
 
-	// python main.py
+	if Temperature == "" || PH == "" || Turbidity == "" || DO == "" {
+		response.Fail(ctx, nil, "参数错误")
+		return
+	}
+
+	// TODO python main.py
 	cmd := exec.Command("python", "main.py", "--Temperature", Temperature, "--PH", PH, "--Turbidity", Turbidity, "--DO", DO)
 	var out, stderr bytes.Buffer
 	cmd.Stderr = &stderr
 	cmd.Stdout = &out
 	if err := cmd.Run(); err != nil {
 		log.Fatalln(err, stderr.String())
+		response.Fail(ctx, nil, "参数错误")
+		return
 	}
 	res := out.String()
 

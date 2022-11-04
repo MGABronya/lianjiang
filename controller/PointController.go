@@ -373,7 +373,7 @@ func Upload(ctx *gin.Context) {
 		StationName: stName,
 		System:      system,
 	})
-	response.Success(ctx, nil, "更新成功")
+	response.Success(ctx, gin.H{"FileName": file.Filename}, "更新成功")
 }
 
 // @title    List
@@ -382,15 +382,6 @@ func Upload(ctx *gin.Context) {
 // @param    ctx *gin.Context       接收一个上下文
 // @return   void
 func List(ctx *gin.Context) {
-	tuser, _ := ctx.Get("user")
-
-	user := tuser.(model.User)
-
-	// TODO 安全等级在二级以下的用户查看文件列表
-	if user.Level < 2 {
-		response.Fail(ctx, nil, "权限不足")
-		return
-	}
 
 	// TODO 取出请求
 	path := ctx.DefaultQuery("path", "/")

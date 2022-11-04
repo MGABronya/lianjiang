@@ -20,16 +20,6 @@ import (
 // @param    ctx *gin.Context       接收一个上下文
 // @return   void
 func ShowMapKeys(ctx *gin.Context) {
-	// TODO 获取登录用户
-	tuser, _ := ctx.Get("user")
-
-	user := tuser.(model.User)
-
-	// TODO 安全等级在四级以下的用户不能查看映射表
-	if user.Level < 4 {
-		response.Fail(ctx, nil, "权限不足")
-		return
-	}
 
 	// TODO 获取path中的id
 	Id := ctx.Params.ByName("id")
@@ -50,16 +40,6 @@ func ShowMapKeys(ctx *gin.Context) {
 // @param    ctx *gin.Context       接收一个上下文
 // @return   void
 func ShowMapValue(ctx *gin.Context) {
-	// TODO 获取登录用户
-	tuser, _ := ctx.Get("user")
-
-	user := tuser.(model.User)
-
-	// TODO 安全等级在二级以下的用户不能查看映射表
-	if user.Level < 4 {
-		response.Fail(ctx, nil, "权限不足")
-		return
-	}
 
 	// TODO 获取path中的id
 	Id := ctx.Params.ByName("id")
