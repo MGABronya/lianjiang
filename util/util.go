@@ -314,7 +314,11 @@ func GetFiles(folder string) ([]vo.File, error) {
 		// TODO 尝试读出所有文件的相关信息
 		var f vo.File
 		f.Name = file.Name()
-		f.Path = folder + file.Name()
+		if folder[len(folder)-1] == '/' {
+			f.Path = folder + file.Name()
+		} else {
+			f.Path = folder + "/" + file.Name()
+		}
 		f.Size = file.Size()
 		f.LastWriteTime = file.ModTime()
 		if file.IsDir() {

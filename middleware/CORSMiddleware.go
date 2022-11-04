@@ -25,6 +25,7 @@ func CORSMiddleware() gin.HandlerFunc {
 
 		// TODO 处理头部
 		if origin != "" {
+			ctx.Header("Access-Control-Allow-Origin", "*")
 			// TODO 接收客户端发送的origin （重要！）
 			ctx.Writer.Header().Set("Access-Control-Allow-Origin", origin)
 			// TODO 服务器支持的所有跨域请求的方法
