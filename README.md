@@ -203,7 +203,7 @@
 
     **方法类型：GET**
 
-    请求参数：需要当前登录用户拥有4及以上安全等级。Authorization中的Bearer Token中提供注册、登录时给出的token，在id处给出表名
+    请求参数：Authorization中的Bearer Token中提供注册、登录时给出的token，在id处给出表名
 
     返回值：返回一个keys，为string数组，包含该表的所有key
 
@@ -213,7 +213,7 @@
 
     **方法类型：GET**
 
-    请求参数：需要当前登录用户拥有4及以上安全等级。Authorization中的Bearer Token中提供注册、登录时给出的token，在id处给出表名，key处给出指定的key
+    请求参数：Authorization中的Bearer Token中提供注册、登录时给出的token，在id处给出表名，key处给出指定的key
 
     返回值：返回一个value，表示key对应的value
 
@@ -265,7 +265,7 @@
 
     **方法类型：GET**
 
-    请求参数：需要当前登录用户拥有2及以上安全等级。Authorization中的Bearer Token中提供注册、登录时给出的token，在Params处提供path，表示要查找的文件路径
+    请求参数：Authorization中的Bearer Token中提供注册、登录时给出的token，在Params处提供path，表示要查找的文件路径
 
     返回值：返回files，为file数组，每个file包含name、path、type、lastWriteTime、size，name表示文件名、path表示文件路径、type表示文件类型、lastWriteTime表示文件最后修改日期、size表示文件大小
 
@@ -340,6 +340,16 @@
     请求参数：需要当前登录用户拥有4及以上安全等级。Authorization中的Bearer Token中提供注册、登录时给出的token，在start处给出起始时间，在end处给出终止时间，当start为空值则不受start限制，end为空值则不受end限制。在Params处提供system和name，system必须在**时间制映射**中存在，name必须在**站名映射**中存在。如果system为空则默认操作所有时间制，name为空则默认操作所有站名。将会恢复对应时间制站名表的在起始时间和终止时间删除的所有数据。
 
     返回值：返回数据恢复成功信息
+    
+  - **接口地址：/forecast**
+
+    **功能：数据预测**
+
+    **方法类型：GET**
+
+    请求参数：Authorization中的Bearer Token中提供注册、登录时给出的token，在Params中给出Temperature、PH、Turbidity、DO四个参数，每个参数均为浮点数。
+
+    返回值：返回一个data数组，包含了三个浮点数
 
 - ## 记录相关
 
