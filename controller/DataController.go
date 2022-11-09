@@ -9,7 +9,6 @@ import (
 	"lianjiang/common"
 	"lianjiang/model"
 	"lianjiang/util"
-	"log"
 	"os/exec"
 	"strconv"
 	"time"
@@ -454,7 +453,6 @@ func Forecast(ctx *gin.Context) {
 	cmd.Stderr = &stderr
 	cmd.Stdout = &out
 	if err := cmd.Run(); err != nil {
-		log.Fatalln(err, stderr.String())
 		response.Fail(ctx, nil, "参数错误")
 		return
 	}
